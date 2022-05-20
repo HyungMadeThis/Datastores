@@ -1,0 +1,37 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <uie:Toolbar name="toolbar" style="display: flex;">
+        <uie:ToolbarMenu display-tooltip-when-elided="true" name="datastore-toolbar-menu" style="width: 160px; margin-left: 8px;" />
+        <uie:ToolbarMenu display-tooltip-when-elided="true" name="context-toolbar-menu" style="width: 160px; margin-left: 8px;" />
+    </uie:Toolbar>
+    <ui:VisualElement name="body" style="flex-direction: column-reverse; flex-grow: 1; margin-left: 4px; margin-right: 4px; margin-bottom: 4px;">
+        <ui:VisualElement name="main-area" style="flex-grow: 1; flex-direction: row;">
+            <ui:TwoPaneSplitView fixed-pane-initial-dimension="250" name="split-view">
+                <ui:VisualElement name="left-panel" style="flex-shrink: 0; flex-grow: 1;">
+                    <ui:VisualElement name="filter-area" style="height: 20px; flex-direction: row; margin-bottom: 4px; margin-top: 4px; overflow: hidden;">
+                        <uie:ToolbarSearchField focusable="true" name="filter-search-field" style="flex-grow: 1; flex-shrink: 1; width: auto;" />
+                        <ui:Button text="Filters" display-tooltip-when-elided="true" name="filters-button" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="elements-list-area" style="flex-grow: 1; display: flex; overflow: hidden; border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px; border-left-color: rgb(42, 42, 42); border-right-color: rgb(42, 42, 42); border-top-color: rgb(42, 42, 42); border-bottom-color: rgb(42, 42, 42);">
+                        <ui:ListView focusable="true" virtualization-method="FixedHeight" show-bound-collection-size="false" name="elements-list" show-alternating-row-backgrounds="ContentOnly" show-border="false" style="flex-grow: 1;" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="footer" style="height: 23px; flex-shrink: 0; display: flex;">
+                        <ui:Label text="100 Total Elements" display-tooltip-when-elided="true" name="total-elements-label" style="-unity-text-align: middle-right; border-right-width: 6px; flex-grow: 1;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="right-panel" style="border-left-width: 3px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px; border-left-color: rgb(42, 42, 42); border-right-color: rgb(42, 42, 42); border-top-color: rgb(42, 42, 42); border-bottom-color: rgb(42, 42, 42); flex-shrink: 0;">
+                    <ui:ScrollView name="scroll-view" style="flex-grow: 1;">
+                        <ui:VisualElement name="content-area" style="flex-grow: 1;" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+            </ui:TwoPaneSplitView>
+        </ui:VisualElement>
+        <ui:VisualElement name="tabs-area" style="height: 27px; flex-direction: row-reverse; align-items: flex-end; flex-shrink: 0; overflow: hidden; bottom: -2px;">
+            <ui:VisualElement name="inspector-tab" style="height: 87%; border-left-color: rgb(42, 42, 42); border-right-color: rgb(42, 42, 42); border-top-color: rgb(42, 42, 42); border-bottom-color: rgb(42, 42, 42); border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; width: 106px; background-color: rgb(56, 56, 56);">
+                <ui:Label text="Inspector" display-tooltip-when-elided="true" name="inspector-label" style="flex-grow: 1; -unity-text-align: upper-center; -unity-font-style: bold; font-size: 14px; background-color: rgba(56, 56, 56, 0); padding-top: 1px;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="general-tab" style="height: 87%; border-left-color: rgb(42, 42, 42); border-right-color: rgb(42, 42, 42); border-top-color: rgb(42, 42, 42); border-bottom-color: rgb(42, 42, 42); border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; width: 105px; background-color: rgb(56, 56, 56); right: -2px;">
+                <ui:Label text="General" display-tooltip-when-elided="true" name="general-label" show-bound-collection-size="false" style="flex-grow: 1; -unity-text-align: upper-center; -unity-font-style: bold; font-size: 14px; margin-top: 1px; background-color: rgba(0, 0, 0, 0);" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
