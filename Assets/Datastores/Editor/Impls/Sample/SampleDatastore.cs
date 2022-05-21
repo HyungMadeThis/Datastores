@@ -19,7 +19,7 @@ namespace Datastores.Sample
 
         private List<IDatastoreElement> m_elements = new List<IDatastoreElement>();
 
-        public SampleDatastore()
+        public override void Init()
         {
             for (int i = 0; i < 100; i++)
             {

@@ -13,14 +13,20 @@ namespace Datastores.Sample
     {
         private Label m_elementLabel;
 
-        public SampleDefaultInspectorView()
-        {
-            m_elementLabel = new Label();
-            Add(m_elementLabel);
-        }
+        private TextField textField;
 
         protected override void CreateView()
         {
+            m_elementLabel = new Label();
+            Add(m_elementLabel);
+            
+            Button button = new Button(() => { textField.value = JsonUtility.ToJson(m_datastoreWindow.m_state, true); });
+            button.text = "Refresh state";
+            Add(button);
+            
+            textField = new TextField();
+            textField.style.flexGrow = 1;
+            Add(textField);
         }
 
         protected override void OnSetElement(IDatastoreElement selectedElement)

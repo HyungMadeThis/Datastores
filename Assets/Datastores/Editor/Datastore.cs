@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Datastores.Sample;
 
 namespace Datastores
 {
@@ -35,9 +36,11 @@ namespace Datastores
         /// </summary>
         public virtual Dictionary<string, (Type, Type)> ContextToTabTypeLookup { get; } = new Dictionary<string, (Type, Type)>()
         {
-            ["Default"] = (typeof(DefaultGeneralView), typeof(DefaultInspectorView)),
+            ["Default"] = (typeof(DefaultGeneralView), typeof(SampleDefaultInspectorView)),
             ["Default2"] = (typeof(DefaultGeneralView), typeof(DefaultInspectorView))
         };
+
+        public abstract void Init();
 
         /// <summary>
         /// Every datastore needs to be able to provide a list of its elements WITH search and filters applied.

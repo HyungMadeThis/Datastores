@@ -21,7 +21,7 @@ namespace Datastores
         }
 
         // statics
-        public static readonly string DatastoresWindowUXML = "Datastores/DatastoresWindowUXML";
+        private static readonly string DatastoresWindowUXML = "Datastores/DatastoresWindowUXML";
         private static readonly string DatastoreToolbarMenu_TAG = "datastore-toolbar-menu";
         private static readonly string ContextToolbarMenu_TAG = "context-toolbar-menu";
         private static readonly string SearchField_TAG = "filter-search-field";
@@ -35,7 +35,6 @@ namespace Datastores
         private static readonly string RightPanel_ScrollView_TAG = "scroll-view";
         private static Color SelectedTab_COLOR = new Color(0.2196f, 0.2196f, 0.2196f); // cool hardcoded colors yey
         private static Color UnselectedTab_COLOR = new Color(0.1647f, 0.1647f, 0.1647f);
-        private static readonly string StateKey = "DatastoreWindowState";
 
         // visual elements
         private ToolbarMenu m_datastoreToolbarMenu;
@@ -54,9 +53,10 @@ namespace Datastores
         private List<Type> m_datastoreTypes = new List<Type>();
         private Dictionary<Type, Datastore> m_datastoreInstances = new Dictionary<Type, Datastore>();
         private Datastore m_selectedDatastore;
-        private List<IDatastoreElement> m_cachedElementsList = new List<IDatastoreElement>();
-        private DatastoreWindowState m_state;
+        [SerializeField]
+        public DatastoreWindowState m_state = new DatastoreWindowState(); //TODO: public for testing  
         private DatastoreState m_datastoreState;
+        private List<IDatastoreElement> m_cachedElementsList = new List<IDatastoreElement>();
         private AGeneralView m_generalView;
         private AInspectorView m_inspectorView;
 
@@ -75,15 +75,8 @@ namespace Datastores
             SetupDatastoresDropdown();
             SetupCallbacks();
 
-            DeserializeState(); 
-        }
-
-        private void OnDisable()
-        {
-            SerializeState();
-            m_state = null;
-            m_datastoreState = null;
-            m_cachedElementsList.Clear();
+            Type selectedDatastoreType = m_datastoreTypes.Find(x => x.Name == m_state.SelectedDatastoreType);
+            LoadDatastore(selectedDatastoreType);
         }
 
         private void CreateLayout()
@@ -103,7 +96,7 @@ namespace Datastores
             m_generalTab = rootVisualElement.Q<VisualElement>(GeneralTab_TAG);
             m_rightPanelScrollView = rootVisualElement.Q<ScrollView>(RightPanel_ScrollView_TAG);
             //=========================================================================================//
-
+            
             m_listViewScroller = m_elementListView.Q<Scroller>(className: ListAreaScroller_CLASSNAME); // direct access to the scrollview
             m_elementListView.onSelectionChange += OnElementSelected;
             m_elementListView.showBoundCollectionSize = false;
@@ -133,71 +126,15 @@ namespace Datastores
             m_generalTab.RegisterCallback<MouseDownEvent>((mouseDownEvent) => { SelectTab(SelectedTab.GENERAL); });
             m_inspectorTab.RegisterCallback<MouseDownEvent>((mouseDownEvent) => { SelectTab(SelectedTab.INSPECTOR); });
             m_searchField.RegisterValueChangedCallback((changeEvent) => { PopulateListView(changeEvent.newValue); });
-        }
-        #endregion
-
-        #region State
-        private void SerializeState()
-        {
-            if(m_state != null)
-            {
-                SaveDatastoreState();
-                EditorPrefs.SetString(StateKey, JsonUtility.ToJson(m_state, true)); // For the future, if this is saved as a SerializeField rather than in editorprefs, we can support multiple instance of the window with CreateInstance<EditorWindow>.
-                //Debug.Log($"Serializing state:\n {JsonUtility.ToJson(m_state, true)}");
-            }
-        }
-
-        private void DeserializeState()
-        {
-            if(!EditorPrefs.HasKey(StateKey))
-            {
-                m_state = new DatastoreWindowState();
-            }
-            else
-            {
-                try {
-                    m_state = JsonUtility.FromJson<DatastoreWindowState>(EditorPrefs.GetString(StateKey));
-                } catch {
-                    m_state = new DatastoreWindowState();
-                }
-            }
-            //Debug.Log($"Deserializing state:\n {JsonUtility.ToJson(m_state, true)}");
-
-            Type selectedDatastoreType = m_datastoreTypes.Find(x => x.Name == m_state.SelectedDatastoreType);
-            LoadDatastore(selectedDatastoreType);
-        }
-
-        private void SaveDatastoreState()
-        {
-            if(m_datastoreState == null || string.IsNullOrEmpty(m_datastoreState.DatastoreTypeName))
-            {
-                return;
-            }
-
-            m_datastoreState.SplitViewPosition = m_splitView.fixedPane.style.width.value.value;
-            m_datastoreState.SearchFieldValue = m_searchField.value;
-            m_datastoreState.ScrollViewPosition = m_rightPanelScrollView.verticalScroller.value;
-            m_datastoreState.ListViewPosition = m_listViewScroller.value;
-
-            m_state.SetDatastoreState(m_datastoreState);
-        }
-
-        private void LoadDatastoreState()
-        {
-            m_splitView.fixedPaneInitialDimension = m_datastoreState.SplitViewPosition;
-            m_searchField.value = m_datastoreState.SearchFieldValue;
-            m_rightPanelScrollView.verticalScroller.value = m_datastoreState.ScrollViewPosition;
-
-            PopulateListView(m_searchField.value);
-            SelectContext(m_datastoreState.SelectedContext);
-            EditorCoroutineUtility.StartCoroutine(LoadSelectedElement(m_datastoreState.SelectedElementId), this);
+            m_splitView.Q<VisualElement>("unity-content-container")[m_splitView.fixedPaneIndex].RegisterCallback<GeometryChangedEvent>(
+                (evt) => { m_datastoreState.SplitViewPosition = evt.newRect.width; });
+            m_elementListView.RegisterCallback((ChangeEvent<float> evt) => { m_datastoreState.ListViewPosition = evt.newValue; });
+            m_searchField.RegisterCallback((ChangeEvent<string> evt) => { m_datastoreState.SearchFieldValue = evt.newValue; });
         }
         #endregion
 
         private void LoadDatastore(Type datastoreType)
         {
-            // Save previous datastore state before loading new one.
-            SaveDatastoreState();
             m_cachedElementsList.Clear();
 
             // if nothing is passed in, default to null datastore.
@@ -214,6 +151,7 @@ namespace Datastores
             if(datastore == null)
             {
                 datastore = Activator.CreateInstance(datastoreType) as Datastore;
+                datastore.Init();
                 m_datastoreInstances.Add(datastoreType, datastore);
             }
             m_selectedDatastore = datastore;
@@ -223,17 +161,27 @@ namespace Datastores
 
             // Update the bindings to the listview and empty it.
             m_elementListView.itemsSource = new List<IDatastoreElement>();
-            m_elementListView.fixedItemHeight = m_selectedDatastore.ElementViewHeight; //TODO: FIX THIS TO BE DYNAMIC HEIGHT!
+            m_elementListView.itemHeight = m_selectedDatastore.ElementViewHeight; //TODO: FIX THIS TO BE DYNAMIC HEIGHT!
             m_elementListView.makeItem = () => Activator.CreateInstance(m_selectedDatastore.ElementViewType) as VisualElement;
             m_elementListView.bindItem = (visualElement, index) => { ((AElementView)visualElement).SetElement((IDatastoreElement)m_elementListView.itemsSource[index], index); };
 
-            // Update state
-            if (m_state != null)
+            // Load state
+            m_state.SelectedDatastoreType = datastoreType.Name;
+            m_datastoreState = m_state.GetDatastoreState(datastoreType);
+            if (m_splitView.fixedPaneInitialDimension.Equals(m_datastoreState.SplitViewPosition))
             {
-                m_state.SelectedDatastoreType = datastoreType.Name;
-                m_datastoreState = m_state.GetDatastoreState(datastoreType);
-                LoadDatastoreState();
+                // If we set the initial dimension to the same value, it doesnt actually refresh the splitview.
+                // so we gotta set it to something different, and then re-set it to get it to guarantee refresh.
+                // It's really stupid the splitview doesnt have a built in "refresh" function.
+                m_splitView.fixedPaneInitialDimension = m_datastoreState.SplitViewPosition + 1;
             }
+            m_splitView.fixedPaneInitialDimension = m_datastoreState.SplitViewPosition;
+            m_searchField.value = m_datastoreState.SearchFieldValue;
+            m_rightPanelScrollView.verticalScroller.value = m_datastoreState.ScrollViewPosition;
+
+            PopulateListView(m_searchField.value);
+            SelectContext(m_datastoreState.SelectedContext);
+            EditorCoroutineUtility.StartCoroutine(LoadSelectedElement(m_datastoreState.SelectedElementId), this);
         }
 
         private void SetupContextsDropdown(Datastore datastore)
@@ -386,15 +334,13 @@ namespace Datastores
         {
             menu.AddItem(new GUIContent("Log State"), false, () =>
             {
-                SerializeState();
                 Debug.Log($"Datastores State:\n {JsonUtility.ToJson(m_state, true)}");
             });
             menu.AddItem(new GUIContent("Clear Datastores State"), false, () =>
             {
-                EditorPrefs.DeleteKey(StateKey);
-                m_state = null;
+                m_state = new DatastoreWindowState();
                 m_datastoreState = null;
-                DeserializeState();
+                LoadDatastore(null);
                 Debug.Log("Cleared state.");
             });
         }

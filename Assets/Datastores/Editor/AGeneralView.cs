@@ -14,6 +14,7 @@ namespace Datastores
 
         public void Init(DatastoreWindow datastoreWindow, Datastore datastore)
         {
+            ResetView();
             m_datastoreWindow = datastoreWindow;
             m_datastore = datastore;
             OnSetDatastore();

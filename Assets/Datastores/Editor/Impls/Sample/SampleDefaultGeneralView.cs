@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Datastores.Sample
@@ -11,13 +8,9 @@ namespace Datastores.Sample
     /// </summary>
     public class SampleDefaultGeneralView : AGeneralView
     {
-        public SampleDefaultGeneralView()
-        {
-            Add(new Label("Sample Base GeneralView"));
-        }
-
         protected override void CreateView()
         {
+            Add(new Label("Sample Base GeneralView"));
         }
 
         protected override void OnSetDatastore()

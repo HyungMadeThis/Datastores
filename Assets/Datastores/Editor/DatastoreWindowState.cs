@@ -16,21 +16,9 @@ namespace Datastores
             if(datastoreState == null)
             {
                 datastoreState = new DatastoreState() { DatastoreTypeName = datastoreType.Name };
-            }
-            return datastoreState;
-        }
-
-        public void SetDatastoreState(DatastoreState datastoreState)
-        {
-            int index = DatastoreStates.FindIndex(x => x.DatastoreTypeName == datastoreState.DatastoreTypeName);
-            if(index == -1)
-            {
                 DatastoreStates.Add(datastoreState);
             }
-            else
-            {
-                DatastoreStates[index] = datastoreState;
-            }
+            return datastoreState;
         }
     }
 

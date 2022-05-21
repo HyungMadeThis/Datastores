@@ -5,7 +5,7 @@ namespace Datastores
     public class NullDatastore : BaseDatastore<NullDatastoreElement>
     {
         List<IDatastoreElement> m_elements = new List<IDatastoreElement>();
-        public NullDatastore()
+        public override void Init()
         {
             for (int i = 0; i < 1; i++)
             {

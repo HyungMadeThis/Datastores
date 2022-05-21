@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Datastores.Sample
@@ -8,15 +5,11 @@ namespace Datastores.Sample
     public class SampleCoolContextInspectorView : AInspectorView
     {
         private Label m_elementLabel;
-
-        public SampleCoolContextInspectorView()
+        
+        protected override void CreateView()
         {
             m_elementLabel = new Label();
             Add(m_elementLabel);
-        }
-
-        protected override void CreateView()
-        {
         }
 
         protected override void OnSetElement(IDatastoreElement selectedElement)
