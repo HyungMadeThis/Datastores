@@ -41,6 +41,7 @@ namespace Datastores
         private ToolbarMenu m_contextToolbarMenu;
         private ToolbarSearchField m_searchField;
         private Button m_filtersButton; // creates a PopupWindow
+        private FiltersPopup m_filtersPopup;
         private ListView m_elementListView;
         private Scroller m_listViewScroller;
         private Label m_totalElementsLabel;
@@ -55,7 +56,7 @@ namespace Datastores
         private Datastore m_selectedDatastore;
         [SerializeField]
         public DatastoreWindowState m_state = new DatastoreWindowState(); //TODO: public for testing  
-        private DatastoreState m_datastoreState;
+        private DatastoreState m_selectedDatastoreState;
         private List<IDatastoreElement> m_cachedElementsList = new List<IDatastoreElement>();
         private AGeneralView m_generalView;
         private AInspectorView m_inspectorView;
@@ -126,10 +127,18 @@ namespace Datastores
             m_generalTab.RegisterCallback<MouseDownEvent>((mouseDownEvent) => { SelectTab(SelectedTab.GENERAL); });
             m_inspectorTab.RegisterCallback<MouseDownEvent>((mouseDownEvent) => { SelectTab(SelectedTab.INSPECTOR); });
             m_searchField.RegisterValueChangedCallback((changeEvent) => { PopulateListView(changeEvent.newValue); });
+            m_filtersButton.clicked += () =>
+            {
+                UnityEditor.PopupWindow.Show(m_filtersButton.worldBound, new FiltersPopup(m_selectedDatastoreState.Filters,
+                    () =>
+                    {
+                        Debug.Log("Filter changed!");
+                    }));
+            };
             m_splitView.Q<VisualElement>("unity-content-container")[m_splitView.fixedPaneIndex].RegisterCallback<GeometryChangedEvent>(
-                (evt) => { m_datastoreState.SplitViewPosition = evt.newRect.width; });
-            m_elementListView.RegisterCallback((ChangeEvent<float> evt) => { m_datastoreState.ListViewPosition = evt.newValue; });
-            m_searchField.RegisterCallback((ChangeEvent<string> evt) => { m_datastoreState.SearchFieldValue = evt.newValue; });
+                (evt) => { m_selectedDatastoreState.SplitViewPosition = evt.newRect.width; });
+            m_elementListView.RegisterCallback((ChangeEvent<float> evt) => { m_selectedDatastoreState.ListViewPosition = evt.newValue; });
+            m_searchField.RegisterCallback((ChangeEvent<string> evt) => { m_selectedDatastoreState.SearchFieldValue = evt.newValue; });
         }
         #endregion
 
@@ -147,12 +156,14 @@ namespace Datastores
             m_datastoreToolbarMenu.text = datastoreType.Name;
 
             // Load datastore instance
+            bool justCreatedDatastore = false;
             m_datastoreInstances.TryGetValue(datastoreType, out Datastore datastore);
             if(datastore == null)
             {
                 datastore = Activator.CreateInstance(datastoreType) as Datastore;
                 datastore.Init();
                 m_datastoreInstances.Add(datastoreType, datastore);
+                justCreatedDatastore = true;
             }
             m_selectedDatastore = datastore;
 
@@ -167,21 +178,46 @@ namespace Datastores
 
             // Load state
             m_state.SelectedDatastoreType = datastoreType.Name;
-            m_datastoreState = m_state.GetDatastoreState(datastoreType);
-            if (m_splitView.fixedPaneInitialDimension.Equals(m_datastoreState.SplitViewPosition))
+            m_selectedDatastoreState = m_state.GetDatastoreState(datastoreType);
+            if (m_splitView.fixedPaneInitialDimension.Equals(m_selectedDatastoreState.SplitViewPosition))
             {
                 // If we set the initial dimension to the same value, it doesnt actually refresh the splitview.
                 // so we gotta set it to something different, and then re-set it to get it to guarantee refresh.
                 // It's really stupid the splitview doesnt have a built in "refresh" function.
-                m_splitView.fixedPaneInitialDimension = m_datastoreState.SplitViewPosition + 1;
+                m_splitView.fixedPaneInitialDimension = m_selectedDatastoreState.SplitViewPosition + 1;
             }
-            m_splitView.fixedPaneInitialDimension = m_datastoreState.SplitViewPosition;
-            m_searchField.value = m_datastoreState.SearchFieldValue;
-            m_rightPanelScrollView.verticalScroller.value = m_datastoreState.ScrollViewPosition;
+            m_splitView.fixedPaneInitialDimension = m_selectedDatastoreState.SplitViewPosition;
+            m_searchField.value = m_selectedDatastoreState.SearchFieldValue;
+            m_rightPanelScrollView.verticalScroller.value = m_selectedDatastoreState.ScrollViewPosition;
+
+            if (justCreatedDatastore)
+            {
+                // Validate ListViewFilters
+                Dictionary<Type, AListViewFilter> existingFilters = new Dictionary<Type, AListViewFilter>();
+                foreach (AListViewFilter existingFilter in m_selectedDatastoreState.Filters)
+                {
+                    existingFilters.Add(existingFilter.GetType(), existingFilter);
+                }
+
+                m_selectedDatastoreState.Filters.Clear();
+                foreach (Type filterType in datastore.ListViewFilterTypes)
+                {
+                    if (existingFilters.ContainsKey(filterType))
+                    {
+                        Debug.Log("Find matching filter: " + filterType.Name);
+                        m_selectedDatastoreState.Filters.Add(existingFilters[filterType]);
+                    }
+                    else
+                    {
+                        Debug.Log("Creating new filter: " + filterType.Name);
+                        m_selectedDatastoreState.Filters.Add((AListViewFilter)Activator.CreateInstance(filterType));
+                    }
+                }
+            }
 
             PopulateListView(m_searchField.value);
-            SelectContext(m_datastoreState.SelectedContext);
-            EditorCoroutineUtility.StartCoroutine(LoadSelectedElement(m_datastoreState.SelectedElementId), this);
+            SelectContext(m_selectedDatastoreState.SelectedContext);
+            EditorCoroutineUtility.StartCoroutine(LoadSelectedElement(m_selectedDatastoreState.SelectedElementId), this);
         }
 
         private void SetupContextsDropdown(Datastore datastore)
@@ -213,9 +249,9 @@ namespace Datastores
             m_generalView.style.display = selectedTab == SelectedTab.GENERAL ? DisplayStyle.Flex : DisplayStyle.None;
             m_inspectorView.style.display = selectedTab == SelectedTab.INSPECTOR ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (m_datastoreState != null)
+            if (m_selectedDatastoreState != null)
             {
-                m_datastoreState.SelectedTab = selectedTab;
+                m_selectedDatastoreState.SelectedTab = selectedTab;
             }
         }
 
@@ -240,9 +276,9 @@ namespace Datastores
 
             // Save context to state
             m_contextToolbarMenu.text = context;
-            if (m_datastoreState != null)
+            if (m_selectedDatastoreState != null)
             {
-                m_datastoreState.SelectedContext = context;
+                m_selectedDatastoreState.SelectedContext = context;
             }
 
             // Create general and inspector views
@@ -271,7 +307,7 @@ namespace Datastores
                 m_inspectorView.SetElement(selectedElement);
             }
 
-            SelectTab(m_datastoreState.SelectedTab);
+            SelectTab(m_selectedDatastoreState.SelectedTab);
         }
 
         /// <summary>
@@ -303,14 +339,14 @@ namespace Datastores
                 int index = m_cachedElementsList.FindIndex(x => x.ElementId == elementId);
                 if (index != -1)
                 {
-                    SelectedTab selectedTab = m_datastoreState != null ? m_datastoreState.SelectedTab : SelectedTab.GENERAL;
+                    SelectedTab selectedTab = m_selectedDatastoreState != null ? m_selectedDatastoreState.SelectedTab : SelectedTab.GENERAL;
                     m_elementListView.SetSelection(index);
                     SelectTab(selectedTab); // m_elementListView.SetSelection() auto selects the Inspector tab but when loading state we want to retain the saved tab instead.
 
-                    m_listViewScroller.value = m_datastoreState.ListViewPosition;
+                    m_listViewScroller.value = m_selectedDatastoreState.ListViewPosition;
                     yield return new WaitForEndOfFrame();
                     //await System.Threading.Tasks.Task.Delay(1);
-                    m_listViewScroller.value = m_datastoreState.ListViewPosition;
+                    m_listViewScroller.value = m_selectedDatastoreState.ListViewPosition;
                 }
                 else
                 {
@@ -323,7 +359,7 @@ namespace Datastores
         {
             IDatastoreElement datastoreElement = elements.Count() == 0 ? null : elements.First() as IDatastoreElement;
             m_inspectorView.SetElement(datastoreElement);
-            m_datastoreState.SelectedElementId = datastoreElement?.ElementId;
+            m_selectedDatastoreState.SelectedElementId = datastoreElement?.ElementId;
             SelectTab(SelectedTab.INSPECTOR);
         }
 
@@ -339,7 +375,7 @@ namespace Datastores
             menu.AddItem(new GUIContent("Clear Datastores State"), false, () =>
             {
                 m_state = new DatastoreWindowState();
-                m_datastoreState = null;
+                m_selectedDatastoreState = null;
                 LoadDatastore(null);
                 Debug.Log("Cleared state.");
             });

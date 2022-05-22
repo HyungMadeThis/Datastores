@@ -40,6 +40,11 @@ namespace Datastores
             ["Default2"] = (typeof(DefaultGeneralView), typeof(DefaultInspectorView))
         };
 
+        /// <summary>
+        /// The  filters that are applicable to this datastore by type. The reason for hardcoding these is the same as the context dictionary above.
+        /// </summary>
+        public virtual List<Type> ListViewFilterTypes { get; } = new List<Type>();
+
         public abstract void Init();
 
         /// <summary>

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Datastores
@@ -12,6 +13,11 @@ namespace Datastores
                 m_elements.Add(new NullDatastoreElement() { ElementId = i.ToString() });
             }
         }
+        
+        public override List<Type> ListViewFilterTypes { get; } = new List<Type>()
+        {
+            typeof(SampleFilterA),
+        };
 
         public override List<IDatastoreElement> GetElements(string searchFieldValue)
         {

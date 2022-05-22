@@ -17,6 +17,12 @@ namespace Datastores.Sample
             ["Cool Context"] =  (typeof(SampleCoolContextGeneralView), typeof(SampleCoolContextInspectorView))
         };
 
+        public override List<Type> ListViewFilterTypes { get; } = new List<Type>()
+        {
+            typeof(SampleFilterA),
+            typeof(SampleFilterB)
+        };
+
         private List<IDatastoreElement> m_elements = new List<IDatastoreElement>();
 
         public override void Init()

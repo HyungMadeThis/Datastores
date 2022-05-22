@@ -29,7 +29,8 @@ namespace Datastores
         public string SelectedContext = string.Empty;
         public string SelectedElementId = string.Empty;
         public string SearchFieldValue = string.Empty;
-        public string Filters = string.Empty;
+        [SerializeReference]
+        public List<AListViewFilter> Filters = new List<AListViewFilter>();
         public float ListViewPosition;
         public float SplitViewPosition = 210f;
         public DatastoreWindow.SelectedTab SelectedTab = DatastoreWindow.SelectedTab.GENERAL;
