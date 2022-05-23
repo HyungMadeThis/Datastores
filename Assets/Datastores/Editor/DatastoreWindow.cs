@@ -21,20 +21,21 @@ namespace Datastores
         }
 
         // statics
-        private static readonly string DatastoresWindowUXML = "Datastores/DatastoresWindowUXML";
-        private static readonly string DatastoreToolbarMenu_TAG = "datastore-toolbar-menu";
-        private static readonly string ContextToolbarMenu_TAG = "context-toolbar-menu";
-        private static readonly string SearchField_TAG = "filter-search-field";
-        private static readonly string FiltersButton_TAG = "filters-button";
-        private static readonly string ElementsList_TAG = "elements-list";
-        private static readonly string ListAreaScroller_CLASSNAME = "unity-scroller--vertical";
-        private static readonly string TotalElementsLabel_TAG = "total-elements-label";
-        private static readonly string SplitView_TAG = "split-view";
-        private static readonly string InspectorTab_TAG = "inspector-tab";
-        private static readonly string GeneralTab_TAG = "general-tab";
-        private static readonly string RightPanel_ScrollView_TAG = "scroll-view";
-        private static Color SelectedTab_COLOR = new Color(0.2196f, 0.2196f, 0.2196f); // cool hardcoded colors yey
-        private static Color UnselectedTab_COLOR = new Color(0.1647f, 0.1647f, 0.1647f);
+        private const string DatastoresWindowUXML = "Datastores/DatastoresWindowUXML";
+        private const string DatastoreToolbarMenu_TAG = "datastore-toolbar-menu";
+        private const string ContextToolbarMenu_TAG = "context-toolbar-menu";
+        private const string SearchField_TAG = "filter-search-field";
+        private const string FiltersButton_TAG = "filters-button";
+        private const string ElementsList_TAG = "elements-list";
+        private const string ListAreaScroller_CLASSNAME = "unity-scroller--vertical";
+        private const string TotalElementsLabel_TAG = "total-elements-label";
+        private const string SplitView_TAG = "split-view";
+        private const string InspectorTab_TAG = "inspector-tab";
+        private const string GeneralTab_TAG = "general-tab";
+        private const string RightPanel_ScrollView_TAG = "scroll-view";
+        private const string RightPanel_ScrollView_ContentArea_TAG = "scroll-content-area";
+        private static readonly Color SelectedTab_COLOR = new Color(0.2196f, 0.2196f, 0.2196f); // cool hardcoded colors yey
+        private static readonly Color UnselectedTab_COLOR = new Color(0.1647f, 0.1647f, 0.1647f);
 
         // visual elements
         private ToolbarMenu m_datastoreToolbarMenu;
@@ -49,8 +50,10 @@ namespace Datastores
         private VisualElement m_inspectorTab;
         private VisualElement m_generalTab;
         private ScrollView m_rightPanelScrollView;
+        private VisualElement m_scrollContentArea;
 
         // variables
+        private static List<DatastoreWindow> m_activeDatastoreWindows = new List<DatastoreWindow>();
         private List<Type> m_datastoreTypes = new List<Type>();
         private Dictionary<Type, Datastore> m_datastoreInstances = new Dictionary<Type, Datastore>();
         private Datastore m_selectedDatastore;
@@ -65,19 +68,30 @@ namespace Datastores
         [MenuItem("Hyung/Datastores")]
         public static void OpenWindow()
         {
-            DatastoreWindow window = GetWindow<DatastoreWindow>("Datastores");
+            DatastoreWindow window = CreateInstance<DatastoreWindow>();
+            window.titleContent = new GUIContent("Datastores");
             window.minSize = new Vector2(371,300);
             window.Show();
         }
 
         private void OnEnable()
         {
+            if (!m_activeDatastoreWindows.Contains(this))
+            {
+                m_activeDatastoreWindows.Add(this);
+            }
+
             CreateLayout();
             SetupDatastoresDropdown();
             SetupCallbacks();
 
             Type selectedDatastoreType = m_datastoreTypes.Find(x => x.Name == m_state.SelectedDatastoreType);
             LoadDatastore(selectedDatastoreType);
+        }
+
+        private void OnDisable()
+        {
+            m_activeDatastoreWindows.Remove(this);
         }
 
         private void CreateLayout()
@@ -96,6 +110,8 @@ namespace Datastores
             m_inspectorTab = rootVisualElement.Q<VisualElement>(InspectorTab_TAG);
             m_generalTab = rootVisualElement.Q<VisualElement>(GeneralTab_TAG);
             m_rightPanelScrollView = rootVisualElement.Q<ScrollView>(RightPanel_ScrollView_TAG);
+            m_scrollContentArea = rootVisualElement.Q<VisualElement>(RightPanel_ScrollView_ContentArea_TAG);
+            
             //=========================================================================================//
             
             m_listViewScroller = m_elementListView.Q<Scroller>(className: ListAreaScroller_CLASSNAME); // direct access to the scrollview
@@ -275,23 +291,23 @@ namespace Datastores
             // Create general and inspector views
             if (m_generalView != null)
             {
-                m_rightPanelScrollView.Remove(m_generalView);
+                m_scrollContentArea.Remove(m_generalView);
             }
 
             m_generalView = Activator.CreateInstance(TabTypes.Item1) as AGeneralView;
             m_generalView.Init(this, m_selectedDatastore);
-            m_rightPanelScrollView.Add(m_generalView);
+            m_scrollContentArea.Add(m_generalView);
             m_generalView.style.display = DisplayStyle.None; // Hide it by default.
 
             IDatastoreElement selectedElement = null; // If the previous inspector had a selected element, retain it and load it into the new inspector
             if (m_inspectorView != null)
             {
                 selectedElement = m_inspectorView.SelectedElement;
-                m_rightPanelScrollView.Remove(m_inspectorView);
+                m_scrollContentArea.Remove(m_inspectorView);
             }
             m_inspectorView = Activator.CreateInstance(TabTypes.Item2) as AInspectorView;
             m_inspectorView.Init(this, m_selectedDatastore);
-            m_rightPanelScrollView.Add(m_inspectorView);
+            m_scrollContentArea.Add(m_inspectorView);
             m_inspectorView.style.display = DisplayStyle.None;
             if(selectedElement != null)
             {
@@ -391,6 +407,39 @@ namespace Datastores
                 LoadDatastore(null);
                 Debug.Log("Cleared state.");
             });
+        }
+
+        /// <summary>
+        /// Request data reload when data was manipulated externally.
+        /// </summary>
+        public void ReloadData()
+        {
+            foreach (DatastoreWindow window in m_activeDatastoreWindows) // Reload this datastore on all active datastore windows.
+            {
+                // We can access this private function because its in the same class.
+                window.ReloadData(m_selectedDatastore.GetType());
+            }
+        }
+        private void ReloadData(Type datastoreType)
+        {
+            m_datastoreInstances[datastoreType].OnDataReloadRequested();
+            if (m_selectedDatastore.GetType() == datastoreType)
+            {
+                PopulateListView(m_searchField.value, m_selectedDatastoreState.Filters);
+            }
+        }
+        
+        /// <summary>
+        /// Forward-facing function to select an element.
+        /// </summary>
+        public void SelectElement(string elementId)
+        {
+            int index = m_cachedElementsList.FindIndex(x => x.ElementId == elementId);
+            if (index != -1)
+            {
+                m_elementListView.SetSelection(index);
+            }
+            m_inspectorView.SetElement(m_selectedDatastore.GetElementById(elementId));
         }
     }
 }

@@ -45,6 +45,9 @@ namespace Datastores
         /// </summary>
         public virtual List<Type> ListViewFilterTypes { get; } = new List<Type>();
 
+        /// <summary>
+        /// Gets called after construction.
+        /// </summary>
         public abstract void Init();
 
         /// <summary>
@@ -59,6 +62,12 @@ namespace Datastores
         /// Because only the inherited class has access to all the elements, this function must exist there rather than here.
         /// </summary>
         public abstract IDatastoreElement GetElementById(string id);
+        
+        /// <summary>
+        /// Gets called when the datastore window wants to reload itself to stay up-to-date. (Possibly after an external data change)
+        /// This gives the datastore a chance to reload its data if necessary.
+        /// </summary>
+        public virtual void OnDataReloadRequested() { }
 
         /// <summary>
         /// Simple sorters.
