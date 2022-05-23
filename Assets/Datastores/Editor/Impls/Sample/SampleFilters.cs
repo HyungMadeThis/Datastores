@@ -1,13 +1,10 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using Datastores;
 using UnityEngine;
 
 public class SampleFilterA : AListViewFilter
 {
-    public bool samplefilterabool;
-    public override float GUIHeight => 9f;
+    public override string FilterName => "Filter A";
 
     public override bool Evaluate(IDatastoreElement datastoreElement)
     {
@@ -18,13 +15,17 @@ public class SampleFilterA : AListViewFilter
     {
         GUILayout.Label("Filter A");
     }
+
+    public override void ResetFilter()
+    {
+        
+    }
 }
 
 [Serializable]
 public class SampleFilterB : AListViewFilter
 {
-    public bool samplefilterbbool;
-    public override float GUIHeight => 40f;
+    public override string FilterName => "Filter B";
     
     public override bool Evaluate(IDatastoreElement datastoreElement)
     {
@@ -34,5 +35,10 @@ public class SampleFilterB : AListViewFilter
     public override void OnGUI(Action CallOnFilterChanged)
     {
         GUILayout.Label("Filter B");
+    }
+    
+    public override void ResetFilter()
+    {
+        
     }
 }

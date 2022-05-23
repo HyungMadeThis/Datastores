@@ -7,7 +7,9 @@ using UnityEngine;
 [Serializable]
 public abstract class AListViewFilter
 {
-    public abstract float GUIHeight { get; }
+    public abstract string FilterName { get; }
+    public virtual float GUIHeight { get; } = 16f;
     public abstract bool Evaluate(IDatastoreElement datastoreElement);
     public abstract void OnGUI(Action CallOnFilterChanged);
+    public abstract void ResetFilter();
 }

@@ -20,7 +20,7 @@ namespace Datastores.Sample
         public override List<Type> ListViewFilterTypes { get; } = new List<Type>()
         {
             typeof(SampleFilterA),
-            typeof(SampleFilterB)
+            typeof(SampleFilterB),
         };
 
         private List<IDatastoreElement> m_elements = new List<IDatastoreElement>();
