@@ -126,15 +126,8 @@ namespace Datastores
         {
             m_generalTab.RegisterCallback<MouseDownEvent>((mouseDownEvent) => { SelectTab(SelectedTab.GENERAL); });
             m_inspectorTab.RegisterCallback<MouseDownEvent>((mouseDownEvent) => { SelectTab(SelectedTab.INSPECTOR); });
-            m_searchField.RegisterValueChangedCallback((changeEvent) => { PopulateListView(changeEvent.newValue); });
-            m_filtersButton.clicked += () =>
-            {
-                UnityEditor.PopupWindow.Show(m_filtersButton.worldBound, new FiltersPopup(m_selectedDatastoreState.Filters,
-                    () =>
-                    {
-                        Debug.Log("Filter changed!");
-                    }));
-            };
+            m_searchField.RegisterValueChangedCallback((changeEvent) => { PopulateListView(changeEvent.newValue, m_selectedDatastoreState.Filters); });
+            m_filtersButton.clicked += () => { UnityEditor.PopupWindow.Show(m_filtersButton.worldBound, new FiltersPopup(m_selectedDatastoreState.Filters, HandleFiltersChanged)); };
             m_splitView.Q<VisualElement>("unity-content-container")[m_splitView.fixedPaneIndex].RegisterCallback<GeometryChangedEvent>(
                 (evt) => { m_selectedDatastoreState.SplitViewPosition = evt.newRect.width; });
             m_elementListView.RegisterCallback((ChangeEvent<float> evt) => { m_selectedDatastoreState.ListViewPosition = evt.newValue; });
@@ -204,18 +197,16 @@ namespace Datastores
                 {
                     if (existingFilters.ContainsKey(filterType))
                     {
-                        Debug.Log("Find matching filter: " + filterType.Name);
                         m_selectedDatastoreState.Filters.Add(existingFilters[filterType]);
                     }
                     else
                     {
-                        Debug.Log("Creating new filter: " + filterType.Name);
                         m_selectedDatastoreState.Filters.Add((AListViewFilter)Activator.CreateInstance(filterType));
                     }
                 }
             }
 
-            PopulateListView(m_searchField.value);
+            PopulateListView(m_searchField.value, m_selectedDatastoreState.Filters);
             SelectContext(m_selectedDatastoreState.SelectedContext);
             EditorCoroutineUtility.StartCoroutine(LoadSelectedElement(m_selectedDatastoreState.SelectedElementId), this);
         }
@@ -310,17 +301,38 @@ namespace Datastores
             SelectTab(m_selectedDatastoreState.SelectedTab);
         }
 
+        private void HandleFiltersChanged()
+        {
+            Debug.Log("filters changed");
+            PopulateListView(m_searchField.value, m_selectedDatastoreState.Filters);
+        }
+
         /// <summary>
         /// To be called when new datastore is loaded or search/filters have changed.
         /// </summary>
-        private void PopulateListView(string searchString)// TODO: pass in filters.
+        private void PopulateListView(string searchString, List<AListViewFilter> filters)
         {
             if(m_selectedDatastore == null)
             {
                 return;
             }
 
+            // Get elements with search applied
             m_cachedElementsList = new List<IDatastoreElement>(m_selectedDatastore.GetElements(searchString));
+            
+            // Apply filters
+            for (int i = m_cachedElementsList.Count - 1; i >= 0; i--)
+            {
+                foreach (AListViewFilter filter in filters)
+                {
+                    if (!filter.Evaluate(m_cachedElementsList[i]))
+                    {
+                        m_cachedElementsList.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+            
             m_elementListView.itemsSource = m_cachedElementsList;
             //m_elementListView.RefreshItems();
             m_totalElementsLabel.text = $"{m_cachedElementsList.Count} Total Element" + (m_cachedElementsList.Count == 1 ? "" : "s");

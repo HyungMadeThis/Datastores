@@ -51,7 +51,6 @@ namespace Datastores
         /// Every datastore needs to be able to provide a list of its elements WITH search and filters applied.
         /// Because only the inherited class has access to all the elements, this function must exist there rather than here.
         /// TODO: Possibly make this async
-        /// TODO: Support filters
         /// </summary>
         public abstract List<IDatastoreElement> GetElements(string searchFieldValue);
 

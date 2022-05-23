@@ -57,6 +57,11 @@ public class FiltersPopup : PopupWindowContent
         GUILayout.BeginArea(resetButtonRect, GUI.skin.label);
         if (GUILayout.Button("Reset"))
         {
+            foreach (AListViewFilter filter in m_listViewFilters)
+            {
+                filter.ResetFilter();
+            }
+            m_onFilterChanged?.Invoke();
         }
         GUILayout.EndArea();
     }
